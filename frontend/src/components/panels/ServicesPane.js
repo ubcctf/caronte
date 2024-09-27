@@ -219,9 +219,9 @@ class ServicesPane extends Component {
                         {<ButtonField variant="red" name="cancel" bordered onClick={this.reset}/>}
                         {isUpdate && <ButtonField variant="red" name= "delete_service"
                                      bordered onClick={this.deleteService}/>}
-                        <ButtonField variant={isUpdate ? "blue" : "green"}
+                        {!isUpdate && <ButtonField variant={isUpdate ? "blue" : "green"}
                                      name={isUpdate ? "update_service" : "add_service"}
-                                     bordered onClick={this.updateService}/>
+                                     bordered onClick={this.updateService}/>}
                     </div>
                 </div>
             </div>
