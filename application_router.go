@@ -216,7 +216,8 @@ func CreateApplicationRouter(applicationContext *ApplicationContext,
 				} else if FileExists(PcapsBasePath + sessionID + ".pcapng") {
 					c.FileAttachment(PcapsBasePath+sessionID+".pcapng", sessionID[:16]+".pcapng")
 				} else {
-					log.WithField("sessionID", sessionID).Panic("pcap file not exists")
+					log.WithField("sessionID", sessionID).Warn("requested pcap file not found")
+					notFound(c, gin.H{"session": sessionID})
 				}
 			} else {
 				notFound(c, gin.H{"session": sessionID})
