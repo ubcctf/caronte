@@ -20,11 +20,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
-	"github.com/google/gopacket/tcpassembly"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"os"
 	"path"
@@ -32,6 +27,12 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/tcpassembly"
+	log "github.com/sirupsen/logrus"
 )
 
 const PcapsBasePath = "pcaps/"
