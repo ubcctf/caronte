@@ -23,8 +23,8 @@ RUN npm install -g pnpm@${PNPM_VERSION}
 WORKDIR /caronte-frontend
 
 # pnpm fetch does require only lockfile
-COPY ./frontend/pnpm-lock.yaml ./
-RUN pnpm fetch --prod
+# COPY ./frontend/pnpm-lock.yaml ./
+# RUN pnpm fetch --prod
 
 COPY ./frontend ./
 RUN pnpm install && pnpm build
