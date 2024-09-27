@@ -41,10 +41,10 @@ if $SETUP ; then
 	curl \
 		--header "Content-Type: application/json"  \
 		--request POST \
-		--data '{"config": {"server_address": "10.10.1.1", "flag_regex": "flg[a-zA-Z0-9]{25}", "auth_required": false}, "accounts": {"usr1": "pwd1"}}' \
+		--data '{"config": {"server_address": "fd66:666:171::2", "flag_regex": "FAUST_[a-zA-Z0-9]{32}", "auth_required": false}, "accounts": {"usr1": "pwd1"}}' \
 		http://localhost:3333/setup
 
-	setup_service 8080  crashair        E53935
+	setup_service 1236  UNKNOWN_A        E53935
 	setup_service 27017 aircnc          5E35B1
 	setup_service 80    lostpropertyhub F9A825
 	setup_service 5555  theone 	    F9A435
@@ -54,7 +54,7 @@ fi
 
 # import pcaps
 if $IMPORT ; then
-	PCAP_DIR="~/pcaps"
+	PCAP_DIR="./import_pcaps"
 	for PCAP in $PCAP_DIR/*.pcap ; do
 		echo "[+] Uploading $PCAP" && \
 		curl -F "file=@$PCAP" "http://localhost:3333/api/pcap/upload"

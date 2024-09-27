@@ -21,10 +21,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/eciavatta/caronte/parsers"
-	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
+
+	"github.com/eciavatta/caronte/parsers"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -236,8 +237,18 @@ func (csc ConnectionStreamsController) DownloadConnectionMessages(c context.Cont
 		if format.Format == "base32" || format.Format == "base64" {
 			sb.WriteString("import base64\n")
 		}
-		sb.WriteString("from pwn import *\n\n")
-		sb.WriteString(fmt.Sprintf("p = remote('%s', %d)\n", connection.DestinationIP, connection.DestinationPort))
+		sb.WriteString(fmt.Sprintf(`from pwn import *
+from typing import List, Union
+import re
+import requests
+		
+FLAG_REGEX=r"FAUST_[A-Za-z0-9/+]{32}"
+TEST_IP = '%s'
+PORT = %d
+		
+def exploit(team_addr: str, chal_data: List[str]) -> Union[List[str], str]:
+	p = remote(team_addr, PORT)
+`, connection.DestinationIP, connection.DestinationPort))
 	}
 
 	lastIsClient, lastIsServer := true, true
@@ -298,12 +309,17 @@ func (csc ConnectionStreamsController) DownloadConnectionMessages(c context.Cont
 		}
 	}
 
+	sb.WriteString(`if __name__ == '__main__':
+	flags = exploit(TEST_IP, ['test'])
+	print(flags)
+		`)
+
 	return sb.String(), true
 }
 
 func (csc ConnectionStreamsController) getConnection(c context.Context, connectionID RowID) Connection {
 	var connection Connection
-	if err := csc.storage.Find(Connections).Context(c).Filter(OrderedDocument{{"_id", connectionID}}).
+	if err := csc.storage.Find(Connections).Context(c).Filter(OrderedDocument{{Key: "_id", Value: connectionID}}).
 		First(&connection); err != nil {
 		log.WithError(err).WithField("id", connectionID).Panic("failed to get connection")
 	}
@@ -314,9 +330,9 @@ func (csc ConnectionStreamsController) getConnectionStream(c context.Context, co
 	documentIndex int) ConnectionStream {
 	var result ConnectionStream
 	if err := csc.storage.Find(ConnectionStreams).Filter(OrderedDocument{
-		{"connection_id", connectionID},
-		{"from_client", fromClient},
-		{"document_index", documentIndex},
+		{Key: "connection_id", Value: connectionID},
+		{Key: "from_client", Value: fromClient},
+		{Key: "document_index", Value: documentIndex},
 	}).Context(c).First(&result); err != nil {
 		log.WithError(err).WithField("connection_id", connectionID).Panic("failed to get a ConnectionStream")
 	}
@@ -358,18 +374,18 @@ func decodePwntools(payload []byte, isClient bool, format string) string {
 	var content string
 	switch format {
 	case "hex":
-		content = fmt.Sprintf("bytes.fromhex('%s')", DecodeBytes(payload, format))
+		content = fmt.Sprintf("\tbytes.fromhex('%s')", DecodeBytes(payload, format))
 	case "base32":
-		content = fmt.Sprintf("base64.b32decode('%s')", DecodeBytes(payload, format))
+		content = fmt.Sprintf("\tbase64.b32decode('%s')", DecodeBytes(payload, format))
 	case "base64":
-		content = fmt.Sprintf("base64.b64decode('%s')", DecodeBytes(payload, format))
+		content = fmt.Sprintf("\tbase64.b64decode('%s')", DecodeBytes(payload, format))
 	default:
 		content = fmt.Sprintf("'%s'", strings.Replace(DecodeBytes(payload, "ascii"), "'", "\\'", -1))
 	}
 
 	if isClient {
-		return fmt.Sprintf("p.send(%s)\n", content)
+		return fmt.Sprintf("\tp.send(%s)\n", content)
 	}
 
-	return fmt.Sprintf("p.recvuntil(%s)\n", content)
+	return fmt.Sprintf("\tp.recvuntil(%s)\n", content)
 }
