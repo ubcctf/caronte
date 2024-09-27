@@ -80,9 +80,10 @@ type RulesDatabase struct {
 }
 
 type RulesManager interface {
-	AddRule(context context.Context, rule Rule) (RowID, error)
+	AddRule(context context.Context, rule Rule) (Rule, error)
 	GetRule(id RowID) (Rule, bool)
 	UpdateRule(context context.Context, id RowID, rule Rule) (bool, error)
+	DeleteRule(context context.Context, id RowID) error
 	GetRules() []Rule
 	FillWithMatchedRules(connection *Connection, clientMatches map[uint][]PatternSlice, serverMatches map[uint][]PatternSlice)
 	DatabaseUpdateChannel() chan RulesDatabase
@@ -149,7 +150,7 @@ func LoadRulesManager(storage Storage, flagRegex string) (RulesManager, error) {
 	return &rulesManager, nil
 }
 
-func (rm *rulesManagerImpl) AddRule(context context.Context, rule Rule) (RowID, error) {
+func (rm *rulesManagerImpl) AddRule(context context.Context, rule Rule) (Rule, error) {
 	rm.mutex.Lock()
 
 	rule.ID = CustomRowID(uint64(len(rm.rules)), time.Now())
@@ -157,7 +158,7 @@ func (rm *rulesManagerImpl) AddRule(context context.Context, rule Rule) (RowID, 
 
 	if err := rm.validateAndAddRuleLocal(&rule); err != nil {
 		rm.mutex.Unlock()
-		return EmptyRowID(), err
+		return Rule{}, err
 	}
 
 	if err := rm.generateDatabase(rule.ID); err != nil {
@@ -170,7 +171,7 @@ func (rm *rulesManagerImpl) AddRule(context context.Context, rule Rule) (RowID, 
 		log.WithError(err).WithField("rule", rule).Panic("failed to insert rule on database")
 	}
 
-	return rule.ID, nil
+	return rule, nil
 }
 
 func (rm *rulesManagerImpl) GetRule(id RowID) (Rule, bool) {
@@ -207,6 +208,21 @@ func (rm *rulesManagerImpl) UpdateRule(context context.Context, id RowID, rule R
 	}
 
 	return updated, nil
+}
+
+func (rm *rulesManagerImpl) DeleteRule(context context.Context, id RowID) error {
+	err := rm.storage.Delete(Rules).Context(context).Filter(OrderedDocument{{"_id", id}}).One()
+	if err != nil {
+		log.WithError(err).WithField("id", id).Panic("failed to delete rule on database")
+	} else {
+		rm.mutex.Lock()
+		rule := rm.rules[id]
+		delete(rm.rules, id)
+		delete(rm.rulesByName, rule.Name)
+		rm.mutex.Unlock()
+	}
+
+	return err
 }
 
 func (rm *rulesManagerImpl) GetRules() []Rule {

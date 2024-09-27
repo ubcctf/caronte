@@ -91,10 +91,10 @@ func CreateApplicationRouter(applicationContext *ApplicationContext,
 				return
 			}
 
-			if id, err := applicationContext.RulesManager.AddRule(c, rule); err != nil {
+			if rule, err := applicationContext.RulesManager.AddRule(c, rule); err != nil {
 				unprocessableEntity(c, err)
 			} else {
-				response := UnorderedDocument{"id": id}
+				response := UnorderedDocument{"id": rule.ID, "name": rule.Name}
 				success(c, response)
 				notificationController.Notify("rules.new", response)
 			}
@@ -112,6 +112,23 @@ func CreateApplicationRouter(applicationContext *ApplicationContext,
 				notFound(c, UnorderedDocument{"id": id})
 			} else {
 				success(c, rule)
+			}
+		})
+
+		api.DELETE("/rules/:id", func(c *gin.Context) {
+			hex := c.Param("id")
+			id, err := RowIDFromHex(hex)
+			if err != nil {
+				badRequest(c, err)
+				return
+			}
+
+			err = applicationContext.RulesManager.DeleteRule(c, id)
+			if err != nil {
+				notFound(c, UnorderedDocument{"id": id})
+			} else {
+				success(c, UnorderedDocument{})
+				notificationController.Notify("rules.delete", UnorderedDocument{"id": id})
 			}
 		})
 
