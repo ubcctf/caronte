@@ -20,15 +20,16 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/tcpassembly"
 	"github.com/google/gopacket/tcpassembly/tcpreader"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestImportPcap(t *testing.T) {
@@ -45,7 +46,7 @@ func TestImportPcap(t *testing.T) {
 	duplicateSessionID, err := pcapImporter.ImportPcap(duplicatePcapFileName, false)
 	require.Error(t, err)
 	assert.Equal(t, sessionID, duplicateSessionID)
-	assert.Error(t, os.Remove(ProcessingPcapsBasePath + duplicatePcapFileName))
+	assert.Error(t, os.Remove(ProcessingPcapsBasePath+duplicatePcapFileName))
 
 	_, isPresent := pcapImporter.GetSession("invalid")
 	assert.False(t, isPresent)
@@ -58,8 +59,8 @@ func TestImportPcap(t *testing.T) {
 
 	checkSessionEquals(t, wrapper, session)
 
-	assert.Error(t, os.Remove(ProcessingPcapsBasePath + fileName))
-	assert.NoError(t, os.Remove(PcapsBasePath + session.ID + ".pcap"))
+	assert.Error(t, os.Remove(ProcessingPcapsBasePath+fileName))
+	assert.NoError(t, os.Remove(PcapsBasePath+session.ID+".pcap"))
 
 	wrapper.Destroy(t)
 }
@@ -85,8 +86,8 @@ func TestCancelImportSession(t *testing.T) {
 
 	checkSessionEquals(t, wrapper, session)
 
-	assert.Error(t, os.Remove(ProcessingPcapsBasePath + fileName))
-	assert.Error(t, os.Remove(PcapsBasePath + sessionID + ".pcap"))
+	assert.Error(t, os.Remove(ProcessingPcapsBasePath+fileName))
+	assert.Error(t, os.Remove(PcapsBasePath+sessionID+".pcap"))
 
 	wrapper.Destroy(t)
 }
@@ -108,8 +109,8 @@ func TestImportNoTcpPackets(t *testing.T) {
 
 	checkSessionEquals(t, wrapper, session)
 
-	assert.Error(t, os.Remove(ProcessingPcapsBasePath + fileName))
-	assert.NoError(t, os.Remove(PcapsBasePath + sessionID + ".pcap"))
+	assert.Error(t, os.Remove(ProcessingPcapsBasePath+fileName))
+	assert.NoError(t, os.Remove(PcapsBasePath+sessionID+".pcap"))
 
 	wrapper.Destroy(t)
 }
@@ -120,13 +121,13 @@ func newTestPcapImporter(wrapper *TestStorageWrapper, serverAddress string) *Pca
 	streamPool := tcpassembly.NewStreamPool(&testStreamFactory{})
 
 	return &PcapImporter{
-		storage:     wrapper.Storage,
-		streamPool:  streamPool,
-		assemblers:  make([]*tcpassembly.Assembler, 0, initialAssemblerPoolSize),
-		sessions:    make(map[string]ImportingSession),
-		mAssemblers: sync.Mutex{},
-		mSessions:   sync.Mutex{},
-		serverNet:   *ParseIPNet(serverAddress),
+		storage:                wrapper.Storage,
+		streamPool:             streamPool,
+		assemblers:             make([]*tcpassembly.Assembler, 0, initialAssemblerPoolSize),
+		sessions:               make(map[string]ImportingSession),
+		mAssemblers:            sync.Mutex{},
+		mSessions:              sync.Mutex{},
+		serverNet:              *ParseIPNet(serverAddress),
 		notificationController: NewNotificationController(nil),
 	}
 }
@@ -145,7 +146,7 @@ func waitSessionCompletion(t *testing.T, pcapImporter *PcapImporter, sessionID s
 
 func checkSessionEquals(t *testing.T, wrapper *TestStorageWrapper, session ImportingSession) {
 	var result ImportingSession
-	assert.NoError(t, wrapper.Storage.Find(ImportingSessions).Filter(OrderedDocument{{"_id", session.ID}}).
+	assert.NoError(t, wrapper.Storage.Find(ImportingSessions).Filter(OrderedDocument{{Key: "_id", Value: session.ID}}).
 		Context(wrapper.Context).First(&result))
 	assert.Equal(t, session.StartedAt.Unix(), result.StartedAt.Unix())
 	assert.Equal(t, session.CompletedAt.Unix(), result.CompletedAt.Unix())
@@ -160,7 +161,7 @@ func checkSessionEquals(t *testing.T, wrapper *TestStorageWrapper, session Impor
 
 func copyToProcessing(t *testing.T, fileName string) string {
 	newFile := fmt.Sprintf("test-%v-%s", time.Now().UnixNano(), fileName)
-	require.NoError(t, CopyFile(ProcessingPcapsBasePath + newFile, "test_data/" + fileName))
+	require.NoError(t, CopyFile(ProcessingPcapsBasePath+newFile, "test_data/"+fileName))
 	return newFile
 }
 
