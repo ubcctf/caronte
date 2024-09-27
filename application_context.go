@@ -24,7 +24,7 @@ import (
 
 type Config struct {
 	ServerAddress string `json:"server_address" binding:"required,ip|cidr" bson:"server_address"`
-	FlagRegex     string `json:"flag_regex" binding:"required,min=8" bson:"flag_regex"`
+	FlagRegex     string `json:"flag_regex" binding:"required,min=1" bson:"flag_regex"`
 	AuthRequired  bool   `json:"auth_required" bson:"auth_required"`
 }
 
